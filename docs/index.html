@@ -9,12 +9,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Finance Control</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="premium-mobile.css">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="config.js"></script>
   <script defer src="app.js"></script>
+  <script defer src="config.js"></script>
+
+<script defer src="theme.js"></script>
 </head>
 <body>
   <main id="authView" class="auth-layout">
@@ -48,7 +52,22 @@
     </aside>
     <main class="main">
       <header class="topbar"><div><h1 id="pageTitle">Dashboard</h1><p class="muted">Controle mensal em reais (BRL)</p></div>
-        <div class="controls"><label>Ambiente<select id="workspace"></select></label><label>Mês de referência<input id="month" type="month" required></label><button id="refreshBtn" type="button">Atualizar</button></div>
+<div class="controls">
+  <label>Ambiente
+    <select id="workspace"></select>
+  </label>
+
+  <label>Mês de referência
+    <input id="month" type="month" required>
+  </label>
+
+  <button id="refreshBtn" type="button">Atualizar</button>
+
+  <label class="theme-control">
+    <input type="checkbox" id="themeMode">
+    <span>Tema escuro</span>
+  </label>
+</div>
       </header>
       <p id="appMessage" class="message" role="status"></p>
       <section id="dashboardPage" class="page">
