@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b58">
+  <meta name="referrer" content="no-referrer">
+
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Finance Control</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="config.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main id="authView" class="auth-layout">
+    <section class="auth-card panel">
+      <div class="brand-icon">FC</div>
+      <h1>Finance Control</h1><p class="muted">Organize sua vida financeira.</p>
+      <form id="loginForm">
+        <label>E-mail<input id="email" type="email" autocomplete="username" required></label>
+        <label>Senha<input id="password" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Entrar</button>
+        <button id="resetBtn" type="button" class="ghost">Esqueci minha senha</button>
+      </form>
+      <form id="recoveryForm" hidden>
+        <h2>Definir nova senha</h2>
+        <label>Nova senha<input id="newPassword" type="password" minlength="12" autocomplete="new-password" required></label>
+        <button class="primary" type="submit">Salvar nova senha</button>
+        <button id="cancelRecovery" type="button">Cancelar e sair</button>
+      </form>
+      <p id="authMessage" role="status" class="message"></p>
+    </section>
+  </main>
+  <div id="appView" class="layout" hidden>
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">FC</div><div><strong>Finance Control</strong><small>Gestão financeira</small></div></div>
+      <nav aria-label="Menu principal">
+        <button data-page="dashboard" class="nav active">Dashboard</button>
+        <button data-page="entries" class="nav">Lançamentos</button>
+        <button data-page="categories" class="nav">Categorias</button>
+      </nav>
+      <div class="sidebar-footer"><small id="userEmail"></small><button id="passwordBtn" class="nav">Alterar senha</button><button id="logoutBtn" class="nav">Sair</button></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><h1 id="pageTitle">Dashboard</h1><p class="muted">Controle mensal em reais (BRL)</p></div>
+        <div class="controls"><label>Ambiente<select id="workspace"></select></label><label>Mês de referência<input id="month" type="month" required></label><button id="refreshBtn" type="button">Atualizar</button></div>
+      </header>
+      <p id="appMessage" class="message" role="status"></p>
+      <section id="dashboardPage" class="page">
+        <div class="metrics">
+          <article class="panel metric"><span>Receitas recebidas</span><strong id="incomeTotal" class="positive">—</strong></article>
+          <article class="panel metric"><span>Despesas pagas</span><strong id="expenseTotal" class="negative">—</strong></article>
+          <article class="panel metric"><span>Resultado realizado do mês</span><strong id="balanceTotal">—</strong></article>
+          <article class="panel metric"><span>Despesas pendentes</span><strong id="pendingTotal">—</strong></article>
+          <article class="panel metric"><span>Receitas pendentes</span><strong id="pendingIncome">—</strong></article>
+          <article class="panel metric"><span>Resultado previsto do mês</span><strong id="forecastTotal">—</strong></article>
+        </div>
+        <div class="two-columns">
+          <section class="panel"><h2>Despesas por categoria</h2><p class="muted">Total previsto: pagas e pendentes</p><div id="categoryChart"></div></section>
+          <section class="panel"><h2>Próximos vencimentos</h2><p class="muted">Despesas pendentes no mês selecionado, inclusive atrasadas.</p><div id="upcoming"></div></section>
+        </div>
+        <p class="muted">Os indicadores usam o mês do vencimento; não representam o saldo bancário acumulado.</p>
+      </section>
+      <section id="entriesPage" class="page" hidden>
+        <div class="panel">
+          <div class="section-heading"><h2>Movimentações</h2><div class="actions"><button id="exportBtn">Exportar CSV</button><button class="primary" id="newEntry">+ Novo lançamento</button></div></div>
+          <div class="filters"><label>Pesquisar<input id="search" type="search" placeholder="Descrição ou categoria"></label><label>Tipo<select id="typeFilter"><option value="">Todos</option><option value="income">Receita</option><option value="expense">Despesa</option></select></label><label>Status<select id="statusFilter"><option value="">Todos</option><option value="paid">Realizado</option><option value="pending">Pendente</option></select></label></div>
+          <div class="table-wrap"><table><thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Realizado em</th><th>Ações</th></tr></thead><tbody id="entryRows"></tbody></table></div>
+        </div>
+      </section>
+      <section id="categoriesPage" class="page" hidden>
+        <div class="panel"><h2>Categorias</h2><form id="categoryForm" class="filters"><label>Nome<input id="categoryName" maxlength="60" required></label><label>Tipo<select id="categoryKind"><option value="expense">Despesa</option><option value="income">Receita</option></select></label><button type="submit" class="primary">Adicionar</button></form><div id="categoryList"></div></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="entryDialog"><form id="entryForm" class="dialog-form">
+    <div class="section-heading"><h2 id="entryTitle">Novo lançamento</h2><button id="closeEntry" type="button" aria-label="Fechar">×</button></div>
+    <label>Descrição<input id="entryDescription" maxlength="150" required></label>
+    <div class="form-grid"><label>Tipo<select id="entryKind"><option value="expense">Despesa</option><option value="income">Receita</option></select></label><label>Categoria<select id="entryCategory" required></select></label></div>
+    <div class="form-grid"><label>Valor (R$)<input id="entryAmount" inputmode="decimal" placeholder="0,00" required></label><label>Vencimento<input id="entryDue" type="date" required></label></div>
+    <div class="form-grid"><label>Status<select id="entryStatus"><option value="pending">Pendente</option><option value="paid">Realizado</option></select></label><label>Data do pagamento/recebimento<input id="entryPaid" type="date" disabled></label></div>
+    <label>Observações<textarea id="entryNotes" maxlength="500" rows="3"></textarea></label>
+    <p id="entryMessage" class="message" role="status"></p><button class="primary" type="submit">Salvar lançamento</button>
+  </form></dialog>
+  <noscript>Ative o JavaScript para usar o Finance Control.</noscript>
+</body>
+</html>

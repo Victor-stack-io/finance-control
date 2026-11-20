@@ -1,0 +1,8 @@
+.env
+.env.*
+*.local.sql
+*.csv
+*.db
+*.sqlite
+*.sqlite3
+.vscode/
