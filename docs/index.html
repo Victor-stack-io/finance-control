@@ -6,10 +6,12 @@
   <meta name="theme-color" content="#087f72">
   <meta name="referrer" content="no-referrer">
 
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.sheetjs.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://cdn.sheetjs.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Finance Control</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="premium-mobile.css">
+  <link rel="stylesheet" href="cards.css">
+  <link rel="stylesheet" href="card-analytics.css">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -17,6 +19,12 @@
   <script defer src="config.js"></script>
   <script defer src="app.js"></script>
   <script defer src="theme.js"></script>
+  <script defer src="card-parser.js"></script>
+  <script defer src="card-import-model.js"></script>
+  <script defer src="card-import.js"></script>
+  <script defer src="cards.js"></script>
+  <script defer src="card-analytics-model.js"></script>
+  <script defer src="card-analytics.js"></script>
   <script defer src="premium.js"></script>
 </head>
 <body>
@@ -46,6 +54,7 @@
         <button data-page="dashboard" class="nav active">Overview</button>
         <button data-page="entries" class="nav">Lançamentos</button>
         <button data-page="fixed" class="nav">Contas fixas</button>
+        <button data-page="cards" class="nav">Cartões de crédito</button>
         <button data-page="annual" class="nav">Visão anual</button>
         <button data-page="budget" class="nav">Orçamentos</button>
         <button data-page="goals" class="nav">Metas financeiras</button>
@@ -81,9 +90,11 @@
           <article class="panel metric"><span>Resultado realizado</span><strong id="balanceTotal">—</strong><small>Recebido − pago</small></article>
           <article class="panel metric"><span>Despesas pendentes</span><strong id="pendingTotal">—</strong><small>Em aberto</small></article>
           <article class="panel metric"><span>Receitas pendentes</span><strong id="pendingIncome">—</strong><small>A receber</small></article>
+          <article class="panel metric"><span>Cartões de crédito</span><strong id="dashboardCardTotal" class="negative">—</strong><small id="dashboardCardPending">Incluído nas despesas</small><button type="button" data-page="cards">Ver faturas por banco</button></article>
           <article class="panel metric"><span>Taxa de economia prevista</span><strong id="savingRate">—</strong><small>Resultado / receita prevista</small></article>
         </div>
         <div class="two-columns flow-grid"><section class="panel"><h2>Fluxo financeiro anual</h2><p class="muted">Receitas e despesas previstas · <span id="chartYear"></span></p><div id="annualChart" class="annual-chart"></div></section><section class="panel"><h2>Despesas por categoria</h2><p class="muted">Pagas e pendentes</p><div id="categoryChart"></div></section></div>
+        <div class="two-columns"><section class="panel"><h2>Cartões por banco</h2><div id="overviewBanks"></div></section><section class="panel"><h2>Consumo dos cartões por categoria</h2><p class="muted">Detalhamento das faturas, sem somar novamente às despesas.</p><div id="overviewCardCategories"></div></section></div>
         <div class="two-columns">
           <section class="panel"><h2>Orçamento do período</h2><div id="budgetSummary"></div></section>
           <section class="panel"><h2>Próximos vencimentos</h2><p class="muted">Despesas pendentes no período selecionado, inclusive atrasadas.</p><div id="upcoming"></div></section>
@@ -97,6 +108,25 @@
           <div class="table-wrap"><table><thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Realizado em</th><th>Ações</th></tr></thead><tbody id="entryRows"></tbody></table></div>
         </div>
       </section>
+      <section id="cardsPage" class="page" hidden>
+        <div class="panel"><div class="section-heading"><div><h2>Faturas de cartão de crédito</h2><p class="muted">Total líquido de faturas no período, por vencimento.</p></div><button id="cardStart" class="primary" disabled>+ Nova fatura / Importar</button></div><div class="card-input-grid"><div><small>Total dos cartões</small><strong id="cardPeriodTotal" class="card-amount negative">—</strong></div><div><small>Pagas</small><strong id="cardPaidTotal" class="card-amount">—</strong></div><div><small>A pagar</small><strong id="cardPendingTotal" class="card-amount negative">—</strong></div></div><label class="card-spaced">Filtrar detalhamento por banco<select id="bankFilter"><option value="">Todos os bancos</option></select></label><details class="card-spaced" open><summary>Filtros de análise</summary><div class="card-input-grid"><label>Cartão<select id="analyticsCardFilter"><option value="">Todos</option></select></label><label>Categoria<select id="analyticsCategoryFilter"><option value="">Todas</option></select></label></div><p class="muted">O período é definido no topo. Totais de faturas e limites permanecem consolidados; filtros detalham o consumo.</p></details><div id="cardList" class="card-bank-list"></div></div>
+        <div id="cardAnalyticsPanel" class="card-analytics" hidden><section class="panel"><h2>Gastos por categoria</h2><div id="analyticsCategories"></div></section><section class="panel"><h2>Estabelecimentos com maior gasto</h2><div id="analyticsMerchants"></div></section><section class="panel"><h2>Comparativo mensal e evolução anual</h2><div id="analyticsCompare"></div><div id="analyticsAnnual"></div><details><summary>Evolução anual por categoria</summary><div id="analyticsByCategory"></div></details></section><section class="panel"><h2>Parcelas futuras estimadas</h2><p class="muted">Estimativa a partir das compras parceladas da última fatura disponível até o mês de referência, por cartão. Não gera despesa nem substitui faturas futuras. Revise descrições e valores.</p><div id="analyticsProjection"></div></section><section class="panel"><h2>Compras do período</h2><div id="analyticsPurchases"></div></section><section class="panel"><h2>Limites mensais por categoria</h2><p class="muted">Todos os cartões, independente dos filtros. Limites atuais.</p><form id="cardLimitForm" class="card-input-grid"><label>Categoria<select id="cardLimitCategory" required></select></label><label>Limite (R$)<input id="cardLimitValue" required inputmode="decimal"></label><button class="primary">Salvar limite</button></form><div id="analyticsLimits"></div></section><section class="panel"><h2>Categorias e memória de classificação</h2><form id="cardCustomCategoryForm" class="card-input-grid"><label>Nova categoria<input id="cardCustomCategory" required maxlength="60"></label><button class="primary">Cadastrar</button></form><div id="analyticsRules"></div></section></div><p id="analyticsMessage" class="message" role="status"></p>
+        <details class="panel card-panel" id="bankRegistry"><summary><strong>Cadastro de bancos e cartões</strong></summary><div class="card-input-grid card-spaced"><form id="bankForm"><label>Nome do banco<input id="bankName" list="bankCatalog" maxlength="60" required placeholder="Ex.: Nubank"></label><datalist id="bankCatalog"></datalist><button class="primary" type="submit">+ Cadastrar banco</button></form><form id="creditCardForm"><label>Banco<select id="creditCardBank" required></select></label><label>Nome / apelido do cartão<input id="creditCardName" maxlength="80" required placeholder="Ex.: Pessoal"></label><button class="primary" type="submit">+ Cadastrar cartão</button></form></div><p id="registryMessage" class="message" role="status"></p><div id="bankRegistryList"></div></details>
+        <form id="cardForm" class="panel card-panel" hidden>
+          <div class="section-heading"><h2>Revisar fatura</h2><button type="button" id="cardCancel">Cancelar</button></div>
+          <p class="notice">Informe o total a pagar conforme a fatura do banco. Cada compra é detalhada aqui; apenas o total líquido é lançado como despesa.</p>
+          <div class="card-input-grid"><label>Banco<select id="cardBank" required></select></label><label>Cartão<select id="cardName" required></select></label><label>Vencimento<input id="cardDue" type="date" required></label><label>Total oficial (R$)<input id="cardTotal" required inputmode="decimal" placeholder="0,00"></label></div>
+          <details class="card-spaced"><summary>Opções avançadas de importação</summary><div class="card-input-grid card-spaced"><label>Senha do PDF (se protegido)<input id="cardPdfPassword" type="password" autocomplete="off" maxlength="128"></label><label class="card-remember"><input id="cardUseOCR" type="checkbox"> Ativar OCR experimental para imagens e PDFs digitalizados</label></div><p class="muted">A senha é utilizada somente para abrir o arquivo e é apagada após a tentativa. OCR pode demorar e errar valores; confira cada lançamento.</p></details>
+          <label class="card-file">Importar fatura (CSV, PDF, XLS, XLSX, OFX, JPG ou PNG)<input id="cardFile" type="file" accept=".csv,.pdf,.xls,.xlsx,.ofx,.jpg,.jpeg,.png"></label><p class="muted">Arquivos são processados no navegador. Informe o vencimento real antes da leitura. Compras e estornos são revisados antes de confirmar. O banco sugerido nunca troca o cartão sem sua confirmação.</p><p id="cardImportProfile" class="muted" role="status"></p>
+          <details id="cardIgnored" hidden></details>
+          <div class="section-heading card-spaced"><h2>Compras e ajustes</h2><button id="cardAddItem" type="button">+ Adicionar item manual</button></div>
+          <datalist id="cardCategoryList"><option>Transporte por aplicativo</option><option>Supermercados</option><option>Combustível</option><option>Restaurantes</option><option>Delivery</option><option>Assinaturas</option><option>Saúde</option><option>Compras e lojas</option><option>Educação</option><option>Estornos e créditos</option><option>Tarifas e encargos</option><option>Pets</option><option>Viagens</option><option>Pedágios e estacionamento</option><option>Tecnologia</option><option>Outros</option></datalist>
+          <div id="cardRows"></div><div class="card-input-grid card-spaced"><div><small>Total dos itens</small><strong id="cardExtractedTotal" class="card-amount">—</strong></div><div><small>Diferença para o total oficial</small><strong id="cardDifference">—</strong></div></div>
+          <label class="card-spaced">Vincular a lançamento existente (opcional)<select id="cardExisting"></select></label><p id="cardExistingHint" class="muted"></p>
+          <p id="cardMessage" class="message" role="status"></p><button type="submit" class="primary">Confirmar fatura e integrar ao saldo</button>
+        </form>
+        <section id="cardDetails" class="panel card-panel" hidden><div class="section-heading"><h2 id="cardDetailTitle"></h2><button id="cardCloseDetails">Fechar</button></div><strong id="cardDetailTotal" class="card-amount negative"></strong><h2 class="card-spaced">Apuração por categoria</h2><div id="cardBreakdown"></div><h2 class="card-spaced">Compras e ajustes</h2><p id="cardReadMessage" class="message" role="status"></p><div class="card-table-wrap"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="cardDetailRows"></tbody></table></div></section>
+      </section>
       <section id="fixedPage" class="page" hidden><div class="panel"><div class="section-heading"><div><h2>Contas fixas</h2><p class="muted">Receitas e despesas mensais recorrentes.</p></div><button class="primary" id="newFixed">+ Nova conta fixa</button></div><p class="notice">As previsões aparecem automaticamente. Alterações valem para os meses futuros; lançamentos existentes não são duplicados automaticamente.</p><div id="fixedList" class="item-grid"></div></div></section>
       <section id="annualPage" class="page" hidden><div class="panel"><h2>Planejamento dos 12 meses</h2><p class="muted">Selecione um mês para abrir a overview correspondente.</p><div id="annualList" class="annual-list"></div></div></section>
       <section id="budgetPage" class="page" hidden><div class="panel"><div class="section-heading"><h2>Orçamentos por categoria</h2><button id="newBudget" class="primary">+ Definir orçamento</button></div><p class="muted">Limites mensais atuais × quantidade de meses do período.</p><div id="budgetList"></div></div></section>
@@ -105,10 +135,10 @@
         <div class="panel"><h2>Categorias</h2><form id="categoryForm" class="filters"><label>Nome<input id="categoryName" maxlength="60" required></label><label>Tipo<select id="categoryKind"><option value="expense">Despesa</option><option value="income">Receita</option></select></label><button type="submit" class="primary">Adicionar</button></form><div id="categoryList"></div></div>
       </section>
     </main>
-    <nav class="mobile-bottom" aria-label="Navegação principal"><button data-page="dashboard"><span>⌂</span>Início</button><button data-page="entries"><span>↔</span>Movimentos</button><button id="mobileAdd"><span>+</span>Adicionar</button><button data-page="fixed"><span>↻</span>Contas fixas</button><button id="mobileMoreBtn"><span>···</span>Mais</button></nav>
+    <nav class="mobile-bottom" aria-label="Navegação principal"><button data-page="dashboard"><span>⌂</span>Início</button><button data-page="entries"><span>↔</span>Movimentos</button><button id="mobileAdd"><span>+</span>Adicionar</button><button data-page="cards"><span>▣</span>Cartões</button><button id="mobileMoreBtn"><span>···</span>Mais</button></nav>
   </div>
-  <dialog id="moreDialog"><div class="section-heading"><h2>Mais opções</h2><button type="button" id="closeMore" aria-label="Fechar">×</button></div><div class="more-menu"><button data-page="annual">Visão anual</button><button data-page="budget">Orçamentos</button><button data-page="goals">Metas financeiras</button><button data-page="categories">Categorias</button><button id="mobilePassword">Alterar senha</button><button id="mobileLogout">Sair</button></div></dialog>
-  <dialog id="addDialog"><div class="section-heading"><h2>Adicionar</h2><button type="button" id="closeAdd" aria-label="Fechar">×</button></div><div class="more-menu"><button id="quickEntry">Novo lançamento</button><button id="quickFixed">Nova conta fixa</button></div></dialog>
+  <dialog id="moreDialog"><div class="section-heading"><h2>Mais opções</h2><button type="button" id="closeMore" aria-label="Fechar">×</button></div><div class="more-menu"><button data-page="fixed">Contas fixas</button><button data-page="cards">Cartões de crédito</button><button data-page="annual">Visão anual</button><button data-page="budget">Orçamentos</button><button data-page="goals">Metas financeiras</button><button data-page="categories">Categorias</button><button id="mobilePassword">Alterar senha</button><button id="mobileLogout">Sair</button></div></dialog>
+  <dialog id="addDialog"><div class="section-heading"><h2>Adicionar</h2><button type="button" id="closeAdd" aria-label="Fechar">×</button></div><div class="more-menu"><button id="quickEntry">Novo lançamento</button><button id="quickFixed">Nova conta fixa</button><button id="quickCard">Importar fatura</button></div></dialog>
   <dialog id="premiumDialog"><form id="premiumForm" class="dialog-form"><div class="section-heading"><h2 id="premiumTitle"></h2><button type="button" id="closePremium" aria-label="Fechar">×</button></div><div id="premiumFields" class="dialog-form"></div><p id="premiumMessage" class="message" role="status"></p><button class="primary" type="submit">Salvar</button></form></dialog>
   <dialog id="entryDialog"><form id="entryForm" class="dialog-form">
     <div class="section-heading"><h2 id="entryTitle">Novo lançamento</h2><button id="closeEntry" type="button" aria-label="Fechar">×</button></div>

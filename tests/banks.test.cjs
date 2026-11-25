@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const p=require('../docs/card-parser.js');
+const banks=[{id:'b1',name:'Nubank'},{id:'b2',name:'Itaú'},{id:'b3',name:'Inter'}];
+const cards=[{id:'c1',bank_id:'b1',name:'Pessoal'},{id:'c2',bank_id:'b1',name:'Virtual'},{id:'c3',bank_id:'b2',name:'Pessoal'}];
+const rows=[{id:'s1',card_id:'c1',total_cents:10000},{id:'s2',card_id:'c2',total_cents:5000},{id:'s3',card_id:'c3',total_cents:20000}];
+const result=p.summarize(rows,[{id:'s3',status:'paid'},{id:'s1',status:'pending'},{id:'s2',status:'pending'}],cards,banks);
+assert.equal(result.total,35000);assert.equal(result.paid,20000);assert.equal(result.pending,15000);
+const nu=result.banks.find(b=>b.id==='b1');assert.equal(nu.total,15000);assert.equal(nu.cards.length,2);assert.equal(nu.pending,15000);
+assert.equal(result.banks.find(b=>b.id==='b3').total,0);assert.equal(result.banks.reduce((s,b)=>s+b.total,0),result.total);
+assert.equal(p.category('Dl*99 Ride'),'Transporte por aplicativo');assert.equal(p.category('Cobasi'),'Pets');assert.equal(p.category('Lifepla*Lifeplanopet'),'Pets');assert.equal(p.category('Linkedin'),'Assinaturas');
+const imported=p.fromCsv('date,title,amount\n2026-11-10,99 Ride,"15,30"\n2026-11-09,Pagamento recebido,"- 20,00"\n2026-11-08,Uber,"- 5,00"','2026-11-25');
+assert.equal(imported.items.filter(x=>!p.isPayment(x.description)).reduce((s,x)=>s+x.amount_cents,0),1030);
+console.log('OK: 13 verificações de múltiplos bancos, cartões, totais, categorias e pagamentos.');
