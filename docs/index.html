@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#173b58">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#087f72">
   <meta name="referrer" content="no-referrer">
 
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
@@ -16,14 +16,13 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="config.js"></script>
   <script defer src="app.js"></script>
-  <script defer src="config.js"></script>
-
-<script defer src="theme.js"></script>
+  <script defer src="theme.js"></script>
+  <script defer src="premium.js"></script>
 </head>
 <body>
   <main id="authView" class="auth-layout">
     <section class="auth-card panel">
-      <div class="brand-icon">FC</div>
+      <div class="brand-icon">fc.</div>
       <h1>Finance Control</h1><p class="muted">Organize sua vida financeira.</p>
       <form id="loginForm">
         <label>E-mail<input id="email" type="email" autocomplete="username" required></label>
@@ -42,26 +41,30 @@
   </main>
   <div id="appView" class="layout" hidden>
     <aside class="sidebar">
-      <div class="brand"><div class="brand-icon">FC</div><div><strong>Finance Control</strong><small>Gestão financeira</small></div></div>
+      <div class="brand"><div class="brand-icon">fc.</div><div><strong>Finance Control</strong><small>Gestão financeira</small></div></div>
       <nav aria-label="Menu principal">
-        <button data-page="dashboard" class="nav active">Dashboard</button>
+        <button data-page="dashboard" class="nav active">Overview</button>
         <button data-page="entries" class="nav">Lançamentos</button>
+        <button data-page="fixed" class="nav">Contas fixas</button>
+        <button data-page="annual" class="nav">Visão anual</button>
+        <button data-page="budget" class="nav">Orçamentos</button>
+        <button data-page="goals" class="nav">Metas financeiras</button>
         <button data-page="categories" class="nav">Categorias</button>
       </nav>
       <div class="sidebar-footer"><small id="userEmail"></small><button id="passwordBtn" class="nav">Alterar senha</button><button id="logoutBtn" class="nav">Sair</button></div>
     </aside>
     <main class="main">
-      <header class="topbar"><div><h1 id="pageTitle">Dashboard</h1><p class="muted">Controle mensal em reais (BRL)</p></div>
+      <header class="topbar"><div class="mobile-brand"><span class="brand-icon">fc.</span> Finance Control</div><div><h1 id="pageTitle">Overview</h1><p class="muted">Seu dinheiro, seus planos e suas prioridades.</p></div>
 <div class="controls">
   <label>Ambiente
     <select id="workspace"></select>
   </label>
 
-  <label>Mês de referência
-    <input id="month" type="month" required>
-  </label>
+  <label>Período<select id="period"><option value="month">Mensal</option><option value="year">Anual</option></select></label>
+  <div class="period-picker"><button id="prevPeriod" type="button" aria-label="Período anterior">‹</button><label id="monthLabel">Mês de referência<input id="month" type="month" required></label><label id="yearLabel" hidden>Ano<input id="year" type="number" min="1900" max="9998" step="1" required></label><button id="nextPeriod" type="button" aria-label="Próximo período">›</button></div>
 
   <button id="refreshBtn" type="button">Atualizar</button>
+  <button id="desktopAdd" class="primary desktop-only" type="button">+ Lançamento</button>
 
   <label class="theme-control">
     <input type="checkbox" id="themeMode">
@@ -71,19 +74,21 @@
       </header>
       <p id="appMessage" class="message" role="status"></p>
       <section id="dashboardPage" class="page">
+        <section class="hero"><div><small>RESULTADO FINANCEIRO PREVISTO</small><strong id="forecastTotal" class="big">—</strong><small id="forecastNote">Receitas previstas − despesas previstas</small></div><div class="heroright"><div><small>Receitas previstas</small><strong id="plannedIncome">—</strong></div><div><small>Despesas previstas</small><strong id="plannedExpense">—</strong></div><progress id="commitment" max="100" value="0"></progress><small id="commitmentLabel">Comprometimento da renda</small></div></section>
         <div class="metrics">
-          <article class="panel metric"><span>Receitas recebidas</span><strong id="incomeTotal" class="positive">—</strong></article>
-          <article class="panel metric"><span>Despesas pagas</span><strong id="expenseTotal" class="negative">—</strong></article>
-          <article class="panel metric"><span>Resultado realizado do mês</span><strong id="balanceTotal">—</strong></article>
-          <article class="panel metric"><span>Despesas pendentes</span><strong id="pendingTotal">—</strong></article>
-          <article class="panel metric"><span>Receitas pendentes</span><strong id="pendingIncome">—</strong></article>
-          <article class="panel metric"><span>Resultado previsto do mês</span><strong id="forecastTotal">—</strong></article>
+          <article class="panel metric"><span>Receitas recebidas</span><strong id="incomeTotal" class="positive">—</strong><small>Realizado</small></article>
+          <article class="panel metric"><span>Despesas pagas</span><strong id="expenseTotal" class="negative">—</strong><small>Realizado</small></article>
+          <article class="panel metric"><span>Resultado realizado</span><strong id="balanceTotal">—</strong><small>Recebido − pago</small></article>
+          <article class="panel metric"><span>Despesas pendentes</span><strong id="pendingTotal">—</strong><small>Em aberto</small></article>
+          <article class="panel metric"><span>Receitas pendentes</span><strong id="pendingIncome">—</strong><small>A receber</small></article>
+          <article class="panel metric"><span>Taxa de economia prevista</span><strong id="savingRate">—</strong><small>Resultado / receita prevista</small></article>
         </div>
+        <div class="two-columns flow-grid"><section class="panel"><h2>Fluxo financeiro anual</h2><p class="muted">Receitas e despesas previstas · <span id="chartYear"></span></p><div id="annualChart" class="annual-chart"></div></section><section class="panel"><h2>Despesas por categoria</h2><p class="muted">Pagas e pendentes</p><div id="categoryChart"></div></section></div>
         <div class="two-columns">
-          <section class="panel"><h2>Despesas por categoria</h2><p class="muted">Total previsto: pagas e pendentes</p><div id="categoryChart"></div></section>
-          <section class="panel"><h2>Próximos vencimentos</h2><p class="muted">Despesas pendentes no mês selecionado, inclusive atrasadas.</p><div id="upcoming"></div></section>
+          <section class="panel"><h2>Orçamento do período</h2><div id="budgetSummary"></div></section>
+          <section class="panel"><h2>Próximos vencimentos</h2><p class="muted">Despesas pendentes no período selecionado, inclusive atrasadas.</p><div id="upcoming"></div></section>
         </div>
-        <p class="muted">Os indicadores usam o mês do vencimento; não representam o saldo bancário acumulado.</p>
+        <p class="muted">Os indicadores usam o período do vencimento; não representam o saldo bancário acumulado.</p>
       </section>
       <section id="entriesPage" class="page" hidden>
         <div class="panel">
@@ -92,11 +97,19 @@
           <div class="table-wrap"><table><thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Realizado em</th><th>Ações</th></tr></thead><tbody id="entryRows"></tbody></table></div>
         </div>
       </section>
+      <section id="fixedPage" class="page" hidden><div class="panel"><div class="section-heading"><div><h2>Contas fixas</h2><p class="muted">Receitas e despesas mensais recorrentes.</p></div><button class="primary" id="newFixed">+ Nova conta fixa</button></div><p class="notice">As previsões aparecem automaticamente. Alterações valem para os meses futuros; lançamentos existentes não são duplicados automaticamente.</p><div id="fixedList" class="item-grid"></div></div></section>
+      <section id="annualPage" class="page" hidden><div class="panel"><h2>Planejamento dos 12 meses</h2><p class="muted">Selecione um mês para abrir a overview correspondente.</p><div id="annualList" class="annual-list"></div></div></section>
+      <section id="budgetPage" class="page" hidden><div class="panel"><div class="section-heading"><h2>Orçamentos por categoria</h2><button id="newBudget" class="primary">+ Definir orçamento</button></div><p class="muted">Limites mensais atuais × quantidade de meses do período.</p><div id="budgetList"></div></div></section>
+      <section id="goalsPage" class="page" hidden><div class="panel"><div class="section-heading"><h2>Metas financeiras</h2><button id="newGoal" class="primary">+ Nova meta</button></div><p class="muted">Acompanhamento manual; não altera seu fluxo financeiro.</p><div id="goalList" class="item-grid"></div></div></section>
       <section id="categoriesPage" class="page" hidden>
         <div class="panel"><h2>Categorias</h2><form id="categoryForm" class="filters"><label>Nome<input id="categoryName" maxlength="60" required></label><label>Tipo<select id="categoryKind"><option value="expense">Despesa</option><option value="income">Receita</option></select></label><button type="submit" class="primary">Adicionar</button></form><div id="categoryList"></div></div>
       </section>
     </main>
+    <nav class="mobile-bottom" aria-label="Navegação principal"><button data-page="dashboard"><span>⌂</span>Início</button><button data-page="entries"><span>↔</span>Movimentos</button><button id="mobileAdd"><span>+</span>Adicionar</button><button data-page="fixed"><span>↻</span>Contas fixas</button><button id="mobileMoreBtn"><span>···</span>Mais</button></nav>
   </div>
+  <dialog id="moreDialog"><div class="section-heading"><h2>Mais opções</h2><button type="button" id="closeMore" aria-label="Fechar">×</button></div><div class="more-menu"><button data-page="annual">Visão anual</button><button data-page="budget">Orçamentos</button><button data-page="goals">Metas financeiras</button><button data-page="categories">Categorias</button><button id="mobilePassword">Alterar senha</button><button id="mobileLogout">Sair</button></div></dialog>
+  <dialog id="addDialog"><div class="section-heading"><h2>Adicionar</h2><button type="button" id="closeAdd" aria-label="Fechar">×</button></div><div class="more-menu"><button id="quickEntry">Novo lançamento</button><button id="quickFixed">Nova conta fixa</button></div></dialog>
+  <dialog id="premiumDialog"><form id="premiumForm" class="dialog-form"><div class="section-heading"><h2 id="premiumTitle"></h2><button type="button" id="closePremium" aria-label="Fechar">×</button></div><div id="premiumFields" class="dialog-form"></div><p id="premiumMessage" class="message" role="status"></p><button class="primary" type="submit">Salvar</button></form></dialog>
   <dialog id="entryDialog"><form id="entryForm" class="dialog-form">
     <div class="section-heading"><h2 id="entryTitle">Novo lançamento</h2><button id="closeEntry" type="button" aria-label="Fechar">×</button></div>
     <label>Descrição<input id="entryDescription" maxlength="150" required></label>
