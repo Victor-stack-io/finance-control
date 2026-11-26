@@ -23,3 +23,6 @@ Consulte [BANCOS_E_CARTOES_V2.md](BANCOS_E_CARTOES_V2.md) para cadastro de banco
 
 ## V5 — Importação bancária ampliada
 Consulte [V5_IMPORTACAO_UNIVERSAL.md](V5_IMPORTACAO_UNIVERSAL.md) para instalação, compatibilidade e pendências de homologação.
+
+## V6 — Importação e conciliação de faturas
+Consulte [V6_IMPORTACAO_CONCILIACAO.md](V6_IMPORTACAO_CONCILIACAO.md). Aplique a migração 11 antes de publicar a nova versão.
